@@ -7,7 +7,7 @@ var jsonToObject = function(stringIn) {
     var data;
     try {
         data = JSON.parse(stripJSON(stringIn));
-        console.log("json converted to object");
+        // console.log("json converted to object");
     } catch(err) {
         data = null;
     }
@@ -20,13 +20,13 @@ var parseGeometryType = function(type) {
         return "Point";
     } else if (type === "esriGeometryMultipoint") {
         return "MultiPoint";
-    } else if (type === "esriGeometryPolyline") {
+    } else if (type === "esriGeometryPath") {
         return "LineString";
     } else if (type === "esriGeometryPolygon") {
         return "Polygon";
-    } /* else if (type === "esriGeometryPolygon") {
+    } else if (type === "esriGeometryPolyline") {
         return "MultiLineString";
-    } else if (type === "esriGeometryPolygon") {
+    } /*else if (type === "esriGeometryPolygon") {
         return "MultiPolygon";
     }*/ else {
         return "Empty";
@@ -43,7 +43,7 @@ var featureToGeo = function(feature_in, geomType) {
     var coordinates;
     if (geomType === "Polygon") {
         coordinates = geom.rings;
-    } else if (geomType === "LineString") {
+    } else if (geomType === "LineString"||geomType === "MultiLineString") {
         coordinates = geom.paths;
     } else if (geomType === "Point") {
         coordinates = [geom.x, geom.y];
@@ -62,19 +62,19 @@ var featureToGeo = function(feature_in, geomType) {
     feature_out.type = "Feature";
     feature_out.geometry = geometry;
     feature_out.properties = properties;
+    // feature_out.spatialReference={wkid:4326};
     
     return feature_out;
 };
 
 var deserialize = function(js, callback) {
-    console.log("begin parsing json");
+    // console.log("begin parsing json");
     
     var o = jsonToObject(js);
     var result;
     if (null !== o) {
         var geomType;
-        geomType = parseGeometryType(o.geometryType);
-        
+        geomType = parseGeometryType(o.geometryType);        
         var features = [];
         for (var i = 0, feature = {}; feature = o.features[i]; i++) {
             // prepare the main parts of the GeoJSON
@@ -85,7 +85,9 @@ var deserialize = function(js, callback) {
         var featColl = {};
         featColl.type = "FeatureCollection";
         featColl.features = features;
-        
+        featColl.fields=o.fields;
+        featColl.spatialReference={wkid:4326};
+
         result = JSON.stringify(featColl, function(key, value) {
             if (typeof value === 'number' && !isFinite(value)) {
                 return String(value);
@@ -93,11 +95,10 @@ var deserialize = function(js, callback) {
             return value;
         });
         
-        console.log("json parsed, return it");
+        // console.log("json parsed, return it");
     } else {
         result = "Sorry, JSON could not be parsed.";
-    }
-    
+    }    
     callback(null, result);
 };
 
